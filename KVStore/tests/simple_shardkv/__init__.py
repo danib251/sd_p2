@@ -1,0 +1,3 @@
+from KVStore.tests.simple_shardkv.simple_kvstore import SimpleKVStoreTests
+from KVStore.tests.simple_shardkv.simple_kvstore_parallel import SimpleKVStoreParallelTests
+from KVStore.tests.simple_shardkv.simple_kvstore_race import SimpleKVStoreRaceTests
