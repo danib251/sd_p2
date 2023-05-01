@@ -1,6 +1,6 @@
 from KVStore.protos.kv_store_pb2 import *
 from KVStore.protos.kv_store_pb2_grpc import KVStoreServicer
-
+import threading
 from KVStore.protos.kv_store_shardmaster_pb2 import Role
 
 EVENTUAL_CONSISTENCY_INTERVAL: int = 5
@@ -42,45 +42,66 @@ class KVStorageService:
 class KVStorageSimpleService(KVStorageService):
 
     def __init__(self):
-        """
-        To fill with your code
-        """
+        self.storage = {}
+        self.lock = threading.Lock()
 
     def get(self, key: int) -> str:
-        """
-        To fill with your code
-        """
+        with self.lock:
+            if key in self.storage:
+                return self.storage[key]
+            else:
+                return None
 
     def l_pop(self, key: int) -> str:
-        """
-        To fill with your code
-        """
+        with self.lock:
+            if key not in self.storage:
+                return None
+            elif len(self.storage[key]) == 0:
+                return ""
+            else:
+                return self.storage[key].pop(0)
 
     def r_pop(self, key: int) -> str:
-        """
-        To fill with your code
-        """
+        with self.lock:
+            if key not in self.storage:
+                return None
+            elif len(self.storage[key]) == 0:
+                return ""
+            else:
+                return self.storage[key].pop()
 
     def put(self, key: int, value: str):
-        """
-        To fill with your code
-        """
+        with self.lock:
+            self.storage[key] = value
 
     def append(self, key: int, value: str):
-        """
-        To fill with your code
-        """
+        with self.lock:
+            if key in self.data:
+                self.data[key] = value + self.data[key]
+            else:
+                self.data[key] = value
 
     def redistribute(self, destination_server: str, lower_val: int, upper_val: int):
-        """
-        To fill with your code
-        """
+        keys_to_remove = []
+        keys_to_transfer = {}
+        for key, value in self.storage.items():
+            if lower_val <= key <= upper_val:
+                keys_to_transfer[key] = value
+                keys_to_remove.append(key)
+        for key in keys_to_remove:
+            del self.storage[key]
+        try:
+            with SimpleClient(destination_server) as client:
+                client.transfer(keys_to_transfer)
+        except Exception as e:
+            # Re-insert transferred keys in case of error
+            for key, value in keys_to_transfer.items():
+                self.storage[key] = value
+            raise e
 
     def transfer(self, keys_values: list):
-        """
-        To fill with your code
-        """
-
+        for key, value in keys_values:
+            self.storage[key] = value
 
 class KVStorageReplicasService(KVStorageService):
     role: Role
