@@ -1,3 +1,4 @@
+import threading
 import time
 import random
 from typing import Dict, Union, List
@@ -47,36 +48,65 @@ class KVStorageService:
 
 
 class KVStorageSimpleService(KVStorageService):
-
     def __init__(self):
-        """
-        To fill with your code
-        """
+        super().__init__()
+        self.data = {}
+        self.lock = threading.Lock()
 
     def get(self, key: int) -> Union[str, None]:
-        """
-        To fill with your code
-        """
+        with self.lock:
+            if key in self.data:
+                return self.data[key]
+            else:
+                return None
 
     def l_pop(self, key: int) -> Union[str, None]:
-        """
-        To fill with your code
-        """
+        with self.lock:
+            if key not in self.data:
+                return None
+
+            value = self.data[key]
+
+            if len(value) == 0:
+                return ""
+
+            popped_char = value[0]
+            if len(value) == 1:
+                self.data[key] = ""
+            else:
+                self.data[key] = value[1:]
+
+            return popped_char
 
     def r_pop(self, key: int) -> Union[str, None]:
-        """
-        To fill with your code
-        """
+        with self.lock:
+            if key not in self.data:
+                return None
+
+            value = self.data[key]
+
+            if len(value) == 0:
+                return ""
+
+            popped_char = value[-1]
+            if len(value) == 1:
+                self.data[key] = ""
+            else:
+                self.data[key] = value[:-1]
+
+            return popped_char
 
     def put(self, key: int, value: str):
-        """
-        To fill with your code
-        """
+        with self.lock:
+            self.data[key] = value
 
     def append(self, key: int, value: str):
-        """
-        To fill with your code
-        """
+        with self.lock:
+            existing_value = self.data.get(key)
+            if existing_value:
+                self.data[key] = value + existing_value
+            else:
+                self.data[key] = value
 
     def redistribute(self, destination_server: str, lower_val: int, upper_val: int):
         """
