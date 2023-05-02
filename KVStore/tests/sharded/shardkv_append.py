@@ -1,5 +1,7 @@
-from KVStore.clients.clients import SimpleClient
-from KVStore.tests.utils import test_get, test_append
+from multiprocessing import Process
+
+from KVStore.clients.clients import SimpleClient, ShardClient
+from KVStore.tests.utils import test_get, test_append, Test
 
 """
 Tests on simple storage requests on a single storage server.
@@ -8,11 +10,19 @@ Tests on simple storage requests on a single storage server.
 DATA = "MUDA "
 
 
-class ShardkvAppendTests:
+class ShardkvAppendTests(Test):
 
-    def __init__(self, client: SimpleClient):
-        self.client = client
+    def _test(self, client_id: int, num_iter: int):
+        client = ShardClient(self.master_address)
+        assert (test_append(client, 81, DATA))
+        assert (test_get(client, 81, DATA * (num_iter + 1)))
+        client.stop()
 
     def test(self, num_iter: int):
-        assert (test_append(self.client, 81, DATA))
-        assert (test_get(self.client, 81, DATA * (num_iter + 1)))
+        procs = [
+            Process(target=self._test, args=[client_id, num_iter])
+            for client_id in range(self.num_clients)
+        ]
+        [proc.start() for proc in procs]
+        [proc.join() for proc in procs]
+

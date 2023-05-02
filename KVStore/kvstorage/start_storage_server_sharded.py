@@ -3,11 +3,16 @@ from multiprocessing import Process, Queue
 
 import grpc
 
+import logging
+
 from KVStore.kvstorage.kvstorage import KVStorageServicer, KVStorageSimpleService
 from KVStore.protos import kv_store_pb2_grpc, kv_store_shardmaster_pb2_grpc
+from KVStore.protos.kv_store_shardmaster_pb2 import JoinRequest, LeaveRequest
+from KVStore.tests.utils import wait
 
 HOSTNAME: str = "localhost"
 
+logger = logging.getLogger(__name__)
 
 def _run(end_queue: Queue, storage_server_port: int, shardmaster_port: int):
     address: str = "%s:%d" % (HOSTNAME, storage_server_port)
@@ -25,11 +30,20 @@ def _run(end_queue: Queue, storage_server_port: int, shardmaster_port: int):
     channel = grpc.insecure_channel(f'localhost:{shardmaster_port}')
     # create a stub (client)
     stub = kv_store_shardmaster_pb2_grpc.ShardMasterStub(channel)
-    stub.Join(storage_server_port)
+    req = JoinRequest(server=address)
+    stub.Join(req)
 
     try:
         end_queue.get(block=True, timeout=240)
-        stub.Leave()
+        logger.info("Leaving")
+        req = LeaveRequest(server=address)
+        stub.Leave(req)
+
+        wait(1)
+
+        channel.close()
+        storage_server.stop(0)
+
     except KeyboardInterrupt:
         storage_server.stop(0)
     except EOFError:

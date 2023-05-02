@@ -2,28 +2,25 @@ import multiprocessing
 import random
 import string
 import time
-from typing import List
+import logging
+from KVStore.clients.clients import ShardReplicaClient
+from KVStore.tests.utils import test_get, test_put, Test
 
-from KVStore.clients.clients import SimpleClient
-from KVStore.tests.utils import test_get, test_put
+
+logger = logging.getLogger(__name__)
 
 """
 Tests on simple storage requests on a single storage server.
 """
 
-EXEC_TIME = 10
+EXEC_TIME = 5
 
 
-class ShardKVReplicationPerformanceTest:
+class ShardKVReplicationPerformanceTest(Test):
 
-    def __init__(self, clients: List[SimpleClient]):
-        if len(clients) > 3:
-            Exception("Max 3 clients")
-        self.clients = {client_id: clients[client_id] for client_id in range(len(clients))}
+    def _test(self, client_id: int, return_dict) -> (float, float):
 
-    def _test(self, process_id: int, return_dict) -> (float, float):
-
-        client = self.clients[process_id]
+        client = ShardReplicaClient(self.master_address)
 
         num_ops = 0
         num_errors = 0
@@ -41,20 +38,27 @@ class ShardKVReplicationPerformanceTest:
 
             num_ops += 1
             if res is False:
+                logger.info("INCORRECT")
                 num_errors += 1
+            else:
+                logger.info("CORRECT")
 
-        return_dict[process_id] = (num_ops / EXEC_TIME, num_errors / EXEC_TIME)
+        return_dict[client_id] = (num_ops / EXEC_TIME, num_errors / EXEC_TIME)
+
+        client.stop()
 
     def test(self):
 
         manager = multiprocessing.Manager()
         return_dict = manager.dict()
 
-        procs = [multiprocessing.Process(target=self._test, args=[client_id, return_dict])
-                 for client_id in range(len(self.clients))]
+        procs = [
+            multiprocessing.Process(target=self._test, args=[client_id, return_dict])
+            for client_id in range(self.num_clients)
+        ]
         [p.start() for p in procs]
-        for proc in procs:
-            proc.join()
+        [p.join() for p in procs]
+        logger.info("Finished test")
 
         throughputs = [res[0] for res in return_dict.values()]
         error_rates = [res[1] for res in return_dict.values()]

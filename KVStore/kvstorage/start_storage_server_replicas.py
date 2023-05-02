@@ -1,3 +1,4 @@
+import time
 from concurrent import futures
 from multiprocessing import Process, Queue
 
@@ -5,6 +6,8 @@ import grpc
 
 from KVStore.kvstorage.kvstorage import KVStorageServicer, KVStorageReplicasService
 from KVStore.protos import kv_store_pb2_grpc, kv_store_shardmaster_pb2_grpc
+from KVStore.protos.kv_store_shardmaster_pb2 import JoinRequest, LeaveRequest, JoinReplicaResponse
+from KVStore.tests.utils import wait
 
 HOSTNAME: str = "localhost"
 
@@ -25,12 +28,22 @@ def _run(end_queue: Queue, storage_server_port: int, shardmaster_port: int, cons
     channel = grpc.insecure_channel(f'localhost:{shardmaster_port}')
     # create a stub (client)
     stub = kv_store_shardmaster_pb2_grpc.ShardMasterStub(channel)
-    role = stub.JoinReplica(storage_server_port)
-    service.set_role(role)
+    req = JoinRequest(server=address)
+    resp: JoinReplicaResponse = stub.JoinReplica(req)
+
+    service.set_role(resp.role)
 
     try:
         end_queue.get(block=True, timeout=240)
-        stub.Leave()
+        req = LeaveRequest(server=address)
+        stub.Leave(req)
+
+        wait(1)
+
+        channel.close()
+
+        storage_server.stop(0)
+
     except KeyboardInterrupt:
         storage_server.stop(0)
     except EOFError:

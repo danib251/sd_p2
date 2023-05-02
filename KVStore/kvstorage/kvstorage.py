@@ -1,9 +1,16 @@
+import time
+import random
+from typing import Dict, Union, List
+import logging
+import grpc
 from KVStore.protos.kv_store_pb2 import *
-from KVStore.protos.kv_store_pb2_grpc import KVStoreServicer
-import threading
+from KVStore.protos.kv_store_pb2_grpc import KVStoreServicer, KVStoreStub
+
 from KVStore.protos.kv_store_shardmaster_pb2 import Role
 
-EVENTUAL_CONSISTENCY_INTERVAL: int = 5
+EVENTUAL_CONSISTENCY_INTERVAL: int = 2
+
+logger = logging.getLogger("KVStore")
 
 
 class KVStorageService:
@@ -26,7 +33,7 @@ class KVStorageService:
     def append(self, key: int, value: str):
         pass
 
-    def redistribute(self, destinationkeys_server: str, lower_val: int, upper_val: int):
+    def redistribute(self, destination_server: str, lower_val: int, upper_val: int):
         pass
 
     def transfer(self, keys_values: list):
@@ -42,81 +49,56 @@ class KVStorageService:
 class KVStorageSimpleService(KVStorageService):
 
     def __init__(self):
-        self.storage = {}
-        self.lock = threading.Lock()
+        """
+        To fill with your code
+        """
 
-    def get(self, key: int) -> str:
-        with self.lock:
-            if key in self.storage:
-                return self.storage[key]
-            else:
-                return None
+    def get(self, key: int) -> Union[str, None]:
+        """
+        To fill with your code
+        """
 
-    def l_pop(self, key: int) -> str:
-        with self.lock:
-            if key not in self.storage:
-                return None
-            elif len(self.storage[key]) == 0:
-                return ""
-            else:
-                return self.storage[key].pop(0)
+    def l_pop(self, key: int) -> Union[str, None]:
+        """
+        To fill with your code
+        """
 
-    def r_pop(self, key: int) -> str:
-        with self.lock:
-            if key not in self.storage:
-                return None
-            elif len(self.storage[key]) == 0:
-                return ""
-            else:
-                return self.storage[key].pop()
+    def r_pop(self, key: int) -> Union[str, None]:
+        """
+        To fill with your code
+        """
 
     def put(self, key: int, value: str):
-        with self.lock:
-            self.storage[key] = value
+        """
+        To fill with your code
+        """
 
     def append(self, key: int, value: str):
-        with self.lock:
-            if key in self.data:
-                self.data[key] = value + self.data[key]
-            else:
-                self.data[key] = value
+        """
+        To fill with your code
+        """
 
     def redistribute(self, destination_server: str, lower_val: int, upper_val: int):
-        keys_to_remove = []
-        keys_to_transfer = {}
-        for key, value in self.storage.items():
-            if lower_val <= key <= upper_val:
-                keys_to_transfer[key] = value
-                keys_to_remove.append(key)
-        for key in keys_to_remove:
-            del self.storage[key]
-        try:
-            with SimpleClient(destination_server) as client:
-                client.transfer(keys_to_transfer)
-        except Exception as e:
-            # Re-insert transferred keys in case of error
-            for key, value in keys_to_transfer.items():
-                self.storage[key] = value
-            raise e
+        """
+        To fill with your code
+        """
 
-    def transfer(self, keys_values: list):
-        for key, value in keys_values:
-            self.storage[key] = value
+    def transfer(self, keys_values: List[KeyValue]):
+        """
+        To fill with your code
+        """
 
-class KVStorageReplicasService(KVStorageService):
+
+class KVStorageReplicasService(KVStorageSimpleService):
     role: Role
 
     def __init__(self, consistency_level: int):
+        super().__init__()
         self.consistency_level = consistency_level
         """
         To fill with your code
         """
 
-    def get(self, key: int) -> str:
-        """
-        To fill with your code
-        """
-
     def l_pop(self, key: int) -> str:
         """
         To fill with your code
@@ -133,16 +115,6 @@ class KVStorageReplicasService(KVStorageService):
         """
 
     def append(self, key: int, value: str):
-        """
-        To fill with your code
-        """
-
-    def redistribute(self, destination_server: str, lower_val: int, upper_val: int):
-        """
-        To fill with your code
-        """
-
-    def transfer(self, keys_values: list):
         """
         To fill with your code
         """
@@ -158,6 +130,7 @@ class KVStorageReplicasService(KVStorageService):
         """
 
     def set_role(self, role: Role):
+        logger.info(f"Got role {role}")
         self.role = role
 
 
@@ -169,47 +142,47 @@ class KVStorageServicer(KVStoreServicer):
         To fill with your code
         """
 
-    def Get(self, request: GetRequest, context):
+    def Get(self, request: GetRequest, context) -> GetResponse:
         """
         To fill with your code
         """
 
-    def LPop(self, request: GetRequest, context):
+    def LPop(self, request: GetRequest, context) -> GetResponse:
         """
         To fill with your code
         """
 
-    def RPop(self, request: GetRequest, context):
+    def RPop(self, request: GetRequest, context) -> GetResponse:
         """
         To fill with your code
         """
 
-    def Put(self, request: PutRequest, context):
+    def Put(self, request: PutRequest, context) -> google_dot_protobuf_dot_empty__pb2.Empty:
         """
         To fill with your code
         """
 
-    def Append(self, request: AppendRequest, context):
+    def Append(self, request: AppendRequest, context) -> google_dot_protobuf_dot_empty__pb2.Empty:
         """
         To fill with your code
         """
 
-    def Redistribute(self, request: RedistributeRequest, context):
+    def Redistribute(self, request: RedistributeRequest, context) -> google_dot_protobuf_dot_empty__pb2.Empty:
         """
         To fill with your code
         """
 
-    def Transfer(self, request: TransferRequest, context):
+    def Transfer(self, request: TransferRequest, context) -> google_dot_protobuf_dot_empty__pb2.Empty:
         """
         To fill with your code
         """
 
-    def AddReplica(self, request: ServerRequest, context):
+    def AddReplica(self, request: ServerRequest, context) -> google_dot_protobuf_dot_empty__pb2.Empty:
         """
         To fill with your code
         """
 
-    def RemoveReplica(self, request: ServerRequest, context):
+    def RemoveReplica(self, request: ServerRequest, context) -> google_dot_protobuf_dot_empty__pb2.Empty:
         """
         To fill with your code
         """

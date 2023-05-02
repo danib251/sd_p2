@@ -1,3 +1,4 @@
+import logging
 import time
 from concurrent import futures
 from multiprocessing import Process
@@ -7,6 +8,8 @@ import grpc
 from KVStore.kvstorage.kvstorage import KVStorageServicer, KVStorageSimpleService
 from KVStore.protos import kv_store_pb2_grpc
 
+logger = logging.getLogger(__name__)
+
 HOSTNAME: str = "localhost"
 
 
@@ -14,11 +17,14 @@ def _run(storage_server_port: int):
     address: str = "%s:%d" % (HOSTNAME, storage_server_port)
 
     storage_server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    logger.info("Created server")
+
     servicer = KVStorageServicer(KVStorageSimpleService())
     kv_store_pb2_grpc.add_KVStoreServicer_to_server(servicer, storage_server)
+    logger.info("Created servicer")
 
     # listen on port 50051
-    print("KV Storage server listening on: %s" % address)
+    logger.info("KV Storage server listening on: %s" % address)
     storage_server.add_insecure_port(address)
     storage_server.start()
 
@@ -31,6 +37,8 @@ def _run(storage_server_port: int):
 
 
 def run(port: int) -> Process:
+
     server_proc = Process(target=_run, args=[port])
     server_proc.start()
+    print("Running server")
     return server_proc

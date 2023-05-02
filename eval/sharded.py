@@ -1,79 +1,95 @@
+import logging
+from KVStore.logger import setup_logger
 from KVStore.shardmaster import start_shardmaster
 from KVStore.kvstorage import start_storage_server_sharded
-from KVStore.clients.clients import ShardClient
-from KVStore.tests.simple_shardkv import *
-from KVStore.tests.sharded.shardkv_append import ShardkvAppendTests
+from KVStore.tests.sharded import ShardKVParallelTests, ShardKVSimpleTests, ShardkvAppendTests
+from KVStore.tests.utils import wait, SHARDMASTER_PORT, get_port
 
-SHARDMASTER_PORT = 52003
-STORAGE_PORTS = [52004 + i for i in range(20)]
+logger = logging.getLogger(__name__)
+
+setup_logger()
+
 NUM_CLIENTS = 2
 NUM_STORAGE_SERVERS = [2, 4, 8]
+master_adress = f"localhost:{SHARDMASTER_PORT}"
 
-print("Tests with different shardmasters")
+print("*************Sharded tests**************")
+
+print("Tests with changing shardmasters")
 for num_servers in NUM_STORAGE_SERVERS:
     print(f"{num_servers} storage servers.")
     server_proc = start_shardmaster.run(SHARDMASTER_PORT)
+    wait()
 
-    storage_proc_end_queues = [start_storage_server_sharded.run(STORAGE_PORTS[i], SHARDMASTER_PORT) for i in
+    storage_proc_end_queues = [start_storage_server_sharded.run(get_port(), SHARDMASTER_PORT) for i in
                                range(num_servers)]
+    wait()
 
-    client = ShardClient(f"localhost:{SHARDMASTER_PORT}")
-    test1 = SimpleKVStoreTests(client)
+    test1 = ShardKVSimpleTests(master_adress, 1)
     test1.test()
-    client.stop()
 
-    clients = [ShardClient(f"localhost:{SHARDMASTER_PORT}") for _ in range(NUM_CLIENTS)]
-    test2 = SimpleKVStoreParallelTests(clients)
+    test2 = ShardKVParallelTests(master_adress, NUM_CLIENTS)
     test2.test()
-    [client.stop() for client in clients]
 
     [queue.put(0) for queue in storage_proc_end_queues]
+    wait()
     server_proc.terminate()
+    wait()
 
 print("Tests redistributions 1")
 #  Test if the system supports dynamic removal of shards
 num_servers = 5
 server_proc = start_shardmaster.run(SHARDMASTER_PORT)
-storage_proc_end_queues = [start_storage_server_sharded.run(STORAGE_PORTS[i], SHARDMASTER_PORT)
-                           for i in range(num_servers)]
-clients = [ShardClient(f"localhost:{SHARDMASTER_PORT}") for _ in range(NUM_CLIENTS)]
+wait()
+storage_proc_end_queues = [
+    start_storage_server_sharded.run(get_port(), SHARDMASTER_PORT)
+    for i in range(num_servers)
+]
+wait()
 
 for i in range(num_servers - 1):
-    print(f"{num_servers} storage servers.")
-    test2 = SimpleKVStoreParallelTests(clients)
+    print(f"{i} storage servers.")
+
+    test2 = ShardKVParallelTests(master_adress, NUM_CLIENTS)
     test2.test()
+    storage_proc_end_queues[i].put(0)
+    wait()
 
-    queue = storage_proc_end_queues[i]
-    queue.put(0)
-
-server_proc.terminate()
 storage_proc_end_queues[num_servers - 1].put(0)
+wait()
+server_proc.terminate()
+wait()
 
 print("Test redistribution 2 (keep data after redistribution)")
-# Test if data is redistributes across shards when the number of nodes changes
+# Test if data gets redistributed across shards when the number of nodes changes
 num_servers = 5
 server_proc = start_shardmaster.run(SHARDMASTER_PORT)
-storage_proc_end_queues = [start_storage_server_sharded.run(STORAGE_PORTS[i], SHARDMASTER_PORT) for i in
-                           range(num_servers)]
-client = ShardClient(f"localhost:{SHARDMASTER_PORT}")
+wait()
+storage_proc_end_queues = [
+    start_storage_server_sharded.run(get_port(), SHARDMASTER_PORT) for i in
+    range(num_servers)
+]
+wait()
 
 for i in range(num_servers - 1):
-    print(f"{num_servers} storage servers.")
+    print(f"{num_servers - i} storage servers.")
 
-    test2 = ShardkvAppendTests(client)
+    test2 = ShardkvAppendTests(master_adress, 1)
     test2.test(i)
 
-    queue = storage_proc_end_queues[0]
-    queue.put(0)
+    storage_proc_end_queues[0].put(0)
+    wait()
     storage_proc_end_queues = storage_proc_end_queues[1:]
 
 for i in range(num_servers):
-    print(f"{num_servers} storage servers.")
+    print(f"{i + 1} storage servers.")
 
-    test2 = ShardkvAppendTests(client)
-    test2.test(i + 4)
+    test2 = ShardkvAppendTests(master_adress, 1)
+    test2.test(i + num_servers - 1)
 
-    storage_proc_end_queues.append(start_storage_server_sharded.run(STORAGE_PORTS[i], SHARDMASTER_PORT))
+    storage_proc_end_queues.append(start_storage_server_sharded.run(get_port(), SHARDMASTER_PORT))
+    wait()
 
 [queue.put(0) for queue in storage_proc_end_queues]
+wait()
 server_proc.terminate()
