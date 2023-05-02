@@ -1,25 +1,36 @@
+import time
 from KVStore.kvstorage import start_storage_server
-from KVStore.clients.clients import SimpleClient
-from KVStore.tests.simple_shardkv import *
+from KVStore.logger import setup_logger
+from KVStore.tests.kvstore import *
+from KVStore.tests.utils import SHARDMASTER_PORT
 
-SERVER_PORT = 52003
+setup_logger()
+
+
 NUM_CLIENTS = 3
 
-server_proc = start_storage_server.run(SERVER_PORT)
+print("*************Single node tests**************")
 
-client = SimpleClient(f"localhost:{SERVER_PORT}")
-test1 = SimpleKVStoreTests(client)
-test1.test()
-client.stop()
+master_adress = f"localhost:{SHARDMASTER_PORT}"
+server_proc = start_storage_server.run(SHARDMASTER_PORT)
+time.sleep(0.5)
 
-clients = [SimpleClient(f"localhost:{SERVER_PORT}") for _ in range(NUM_CLIENTS)]
-test2 = SimpleKVStoreParallelTests(clients)
-test2.test()
-[ client.stop() for client in clients]
+try:
 
-clients = [SimpleClient(f"localhost:{SERVER_PORT}") for _ in range(NUM_CLIENTS)]
-test2 = SimpleKVStoreRaceTests(clients)
-test2.test()
-[ client.stop() for client in clients]
+    print("-Simple tests-")
+    test1 = SimpleKVStoreTests(master_adress, 1)
+    test1.test()
 
+    print("-Parallel tests-")
+    test2 = SimpleKVStoreParallelTests(master_adress, NUM_CLIENTS)
+    test2.test()
+
+    print("-Race condition tests-")
+    test2 = SimpleKVStoreRaceTests(master_adress, NUM_CLIENTS)
+    test2.test()
+
+except KeyboardInterrupt:
+    pass
+
+print("\n\n...Terminating server")
 server_proc.terminate()
