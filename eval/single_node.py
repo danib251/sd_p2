@@ -25,6 +25,12 @@ if __name__ == '__main__':
         test1 = SimpleKVStoreTests(master_address, 1)
         test1.test()
 
+        
+
+    except KeyboardInterrupt:
+        pass
+    
+    '''
         print("-Parallel tests-")
         test2 = SimpleKVStoreParallelTests(master_address, NUM_CLIENTS)
         test2.test()
@@ -32,9 +38,7 @@ if __name__ == '__main__':
         print("-Race condition tests-")
         test2 = SimpleKVStoreRaceTests(master_address, NUM_CLIENTS)
         test2.test()
-
-    except KeyboardInterrupt:
-        pass
+    '''
 
     print("\n\n...Terminating server")
     server_proc.terminate()
