@@ -3,8 +3,11 @@ import random
 from typing import Dict, Union, List
 import logging
 import grpc
+
+from KVStore.protos import kv_store_pb2
 from KVStore.protos.kv_store_pb2 import *
 from KVStore.protos.kv_store_pb2_grpc import KVStoreServicer, KVStoreStub
+from google.protobuf import empty_pb2
 
 from KVStore.protos.kv_store_shardmaster_pb2 import Role
 import threading
@@ -54,11 +57,11 @@ class KVStorageSimpleService(KVStorageService):
         self.lock = threading.Lock()
 
     def get(self, key: int) -> Union[str, None]:
-        '''with self.lock:
+        with self.lock:
             if key in self.storage:
                 return self.storage[key]
             else:
-                return None'''
+                return None
 
     def l_pop(self, key: int) -> Union[str, None]:
         with self.lock:
@@ -166,24 +169,41 @@ class KVStorageServicer(KVStoreServicer):
         """
 
     def Get(self, request: GetRequest, context) -> GetResponse:
-        """
-        To fill with your code
-        """
+        key = request.key
+        value = self.storage_service.get(key)
+        if value is not None:
+            return kv_store_pb2.GetResponse(value=value)
+        else:
+            context.set_code(grpc.StatusCode.NOT_FOUND)
+            context.set_details("Key not found.")
+            return kv_store_pb2.GetResponse()
 
-    def LPop(self, request: GetRequest, context) -> GetResponse:
-        """
-        To fill with your code
-        """
 
-    def RPop(self, request: GetRequest, context) -> GetResponse:
-        """
-        To fill with your code
-        """
+    def LPop(self, request: kv_store_pb2.GetRequest, context) -> kv_store_pb2.GetRequest:
+        key = request.key
+        value = self.storage_service.l_pop(key)
+        if value is not None:
+            return kv_store_pb2.GetRequest(value=value)
+        else:
+            context.set_code(grpc.StatusCode.NOT_FOUND)
+            context.set_details("Key not found.")
+            return kv_store_pb2.GetRequest()
 
-    def Put(self, request: PutRequest, context) -> google_dot_protobuf_dot_empty__pb2.Empty:
-        """
-        To fill with your code
-        """
+    def RPop(self, request: kv_store_pb2.GetRequest, context) -> kv_store_pb2.GetRequest:
+        key = request.key
+        value = self.storage_service.r_pop(key)
+        if value is not None:
+            return kv_store_pb2.GetRequest(value=value)
+        else:
+            context.set_code(grpc.StatusCode.NOT_FOUND)
+            context.set_details("Key not found.")
+            return kv_store_pb2.GetRequest()
+
+    def Put(self, request: kv_store_pb2.PutRequest, context) -> empty_pb2.Empty:
+        key = request.key
+        value = request.value
+        self.storage_service.put(key, value)
+        return empty_pb2.Empty()
 
     def Append(self, request: AppendRequest, context) -> google_dot_protobuf_dot_empty__pb2.Empty:
         """
