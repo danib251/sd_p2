@@ -48,7 +48,10 @@ def test_get(client: SimpleClient, key: int, expected_value: str) -> bool:
     for _ in range(RETRIES):
         result: bool = _get()
         if result is True:
+            print("get success")
             return True
+        else:
+            print("get failed")
         time.sleep(WAIT)
     return False
 

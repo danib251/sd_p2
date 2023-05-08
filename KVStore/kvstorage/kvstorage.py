@@ -171,12 +171,12 @@ class KVStorageServicer(KVStoreServicer):
     def Get(self, request: GetRequest, context) -> GetResponse:
         key = request.key
         value = self.storage_service.get(key)
-        if value is not None:
-            return kv_store_pb2.GetResponse(value=value)
-        else:
-            context.set_code(grpc.StatusCode.NOT_FOUND)
-            context.set_details("Key not found.")
-            return kv_store_pb2.GetResponse()
+
+        # Comprobamos si la key existe
+        if value is None:
+            return GetResponse()
+
+        return GetResponse(value=value)
 
 
     def LPop(self, request: kv_store_pb2.GetRequest, context) -> kv_store_pb2.GetRequest:
