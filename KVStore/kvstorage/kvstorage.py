@@ -87,10 +87,11 @@ class KVStorageSimpleService(KVStorageService):
 
     def append(self, key: int, value: str):
         with self.lock:
-            if key in self.data:
-                self.data[key] = value + self.data[key]
+            if key in self.storage:
+                self.storage[key] = value + self.storage[key]
             else:
-                self.data[key] = value
+                self.storage[key] = value
+                
 
     def redistribute(self, destination_server: str, lower_val: int, upper_val: int):
         keys_to_remove = []

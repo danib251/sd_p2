@@ -1,7 +1,7 @@
 from typing import Union, Dict
 import grpc
 import logging
-from KVStore.protos.kv_store_pb2 import GetRequest, PutRequest, GetResponse
+from KVStore.protos.kv_store_pb2 import GetRequest, PutRequest, GetResponse, AppendRequest
 from KVStore.protos.kv_store_pb2_grpc import KVStoreStub
 from KVStore.protos.kv_store_shardmaster_pb2 import QueryRequest, QueryResponse, QueryReplicaRequest, Operation
 from KVStore.protos.kv_store_shardmaster_pb2_grpc import ShardMasterStub
@@ -51,9 +51,8 @@ class SimpleClient:
         self.stub.Put(request)
 
     def append(self, key: int, value: str):
-        """
-        To fill with your code
-        """
+        request = AppendRequest(key=key, value=value)
+        self.stub.Append(request)
 
     def stop(self):
         self.channel.close()
