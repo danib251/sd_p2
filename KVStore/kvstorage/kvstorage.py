@@ -88,7 +88,7 @@ class KVStorageSimpleService(KVStorageService):
     def append(self, key: int, value: str):
         with self.lock:
             if key in self.storage:
-                self.storage[key] = value + self.storage[key]
+                self.storage[key] = self.storage[key] + value  
             else:
                 self.storage[key] = value
                 
