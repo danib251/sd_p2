@@ -8,7 +8,7 @@ from KVStore.protos import kv_store_pb2
 from KVStore.protos.kv_store_pb2 import *
 from KVStore.protos.kv_store_pb2_grpc import KVStoreServicer, KVStoreStub
 from google.protobuf import empty_pb2
-
+from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 from KVStore.protos.kv_store_shardmaster_pb2 import Role
 import threading
 
@@ -171,11 +171,8 @@ class KVStorageServicer(KVStoreServicer):
     def Get(self, request: GetRequest, context) -> GetResponse:
         key = request.key
         value = self.storage_service.get(key)
-
-        # Comprobamos si la key existe
         if value is None:
             return GetResponse()
-
         return GetResponse(value=value)
 
 
@@ -206,10 +203,10 @@ class KVStorageServicer(KVStoreServicer):
         return empty_pb2.Empty()
 
     def Append(self, request: AppendRequest, context) -> google_dot_protobuf_dot_empty__pb2.Empty:
-        """
-        To fill with your code
-        """
-
+        key = request.key
+        value = request.value
+        self.storage_service.append(key, value)
+        return google_dot_protobuf_dot_empty__pb2.Empty()
     def Redistribute(self, request: RedistributeRequest, context) -> google_dot_protobuf_dot_empty__pb2.Empty:
         """
         To fill with your code

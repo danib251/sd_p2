@@ -72,7 +72,10 @@ def test_l_pop(client: SimpleClient, key: int, expected_value: str) -> bool:
     for _ in range(RETRIES):
         result: bool = _l_pop()
         if result is True:
+            print("l_pop success")
             return True
+        else:
+            print("l_pop failed")
         time.sleep(WAIT)
     return False
 
@@ -93,7 +96,10 @@ def test_r_pop(client: SimpleClient, key: int, expected_value: str) -> bool:
     for _ in range(RETRIES):
         result: bool = _r_pop()
         if result is True:
+            print
             return True
+        else:
+            print("r_pop failed")
         time.sleep(WAIT)
     return False
 
@@ -127,7 +133,10 @@ def test_append(client: SimpleClient, key: int, value: str) -> bool:
     for _ in range(RETRIES):
         result: bool = _append()
         if result is True:
+            print("append success")
             return True
+        else:
+            print("append failed")
         time.sleep(WAIT)
     return False
 
@@ -144,7 +153,10 @@ def test_put(client: SimpleClient, key: int, value: str) -> bool:
     for _ in range(RETRIES):
         result: bool = _put()
         if result is True:
+            print("put success")
             return True
+        else:
+            print("put failed")
         time.sleep(WAIT)
     return False
 
