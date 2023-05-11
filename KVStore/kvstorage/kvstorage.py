@@ -70,7 +70,9 @@ class KVStorageSimpleService(KVStorageService):
             elif len(self.storage[key]) == 0:
                 return ""
             else:
-                return self.storage[key].pop(0)
+                value = self.storage[key][0]
+                self.storage[key] = self.storage[key][1:]
+                return value
 
     def r_pop(self, key: int) -> Union[str, None]:
         with self.lock:
@@ -79,7 +81,9 @@ class KVStorageSimpleService(KVStorageService):
             elif len(self.storage[key]) == 0:
                 return ""
             else:
-                return self.storage[key].pop()
+                value = self.storage[key][-1]
+                self.storage[key] = self.storage[key][:-1]
+                return value
 
     def put(self, key: int, value: str):
         with self.lock:
@@ -181,21 +185,19 @@ class KVStorageServicer(KVStoreServicer):
         key = request.key
         value = self.storage_service.l_pop(key)
         if value is not None:
-            return kv_store_pb2.GetRequest(value=value)
+            return kv_store_pb2.GetResponse(value=value)
         else:
-            context.set_code(grpc.StatusCode.NOT_FOUND)
-            context.set_details("Key not found.")
-            return kv_store_pb2.GetRequest()
+            return kv_store_pb2.GetResponse()
 
     def RPop(self, request: kv_store_pb2.GetRequest, context) -> kv_store_pb2.GetRequest:
         key = request.key
         value = self.storage_service.r_pop(key)
         if value is not None:
-            return kv_store_pb2.GetRequest(value=value)
+            return kv_store_pb2.GetResponse(value=value)
         else:
             context.set_code(grpc.StatusCode.NOT_FOUND)
             context.set_details("Key not found.")
-            return kv_store_pb2.GetRequest()
+            return kv_store_pb2.GetResponse()
 
     def Put(self, request: kv_store_pb2.PutRequest, context) -> empty_pb2.Empty:
         key = request.key
