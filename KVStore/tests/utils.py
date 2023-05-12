@@ -96,7 +96,7 @@ def test_r_pop(client: SimpleClient, key: int, expected_value: str) -> bool:
     for _ in range(RETRIES):
         result: bool = _r_pop()
         if result is True:
-            print
+            print("r_pop success")
             return True
         else:
             print("r_pop failed")
