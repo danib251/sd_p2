@@ -23,7 +23,8 @@ class SimpleClient:
     def get(self, key: int) -> Union[str, None]:
         request = GetRequest(key=key)
         response = self.stub.Get(request)
-        if response.value != "":
+        result = _get_return(response)
+        if result is not None:
             return response.value
         else:
             return None
@@ -32,7 +33,8 @@ class SimpleClient:
     def l_pop(self, key: int) -> Union[str, None]:
         request = GetRequest(key=key)
         response = self.stub.LPop(request)
-        if response.value != "":
+        result = _get_return(response)
+        if result is not None:
             return response.value
         else:
             return None
@@ -41,7 +43,8 @@ class SimpleClient:
     def r_pop(self, key: int) -> Union[str, None]:
         request = GetRequest(key=key)
         response = self.stub.RPop(request)
-        if response.value != "":
+        result = _get_return(response)
+        if result is not None:
             return response.value
         else:
             return None
