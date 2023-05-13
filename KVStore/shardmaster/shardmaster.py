@@ -1,11 +1,11 @@
 import logging
-#from KVStore.tests.utils import KEYS_LOWER_THRESHOLD, KEYS_UPPER_THRESHOLD
+from KVStore.tests.utils import KEYS_LOWER_THRESHOLD, KEYS_UPPER_THRESHOLD
 from KVStore.protos.kv_store_pb2 import RedistributeRequest, ServerRequest
 from KVStore.protos.kv_store_pb2_grpc import KVStoreStub
 from KVStore.protos.kv_store_shardmaster_pb2_grpc import ShardMasterServicer
 from KVStore.protos.kv_store_shardmaster_pb2 import *
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
-
+from KVStore.kvstorage.kvstorage import KVStorageSimpleService
 logger = logging.getLogger(__name__)
 
 
@@ -34,11 +34,13 @@ class ShardMasterSimpleService(ShardMasterService):
             if server not in self.servers:
                 self.servers.append(server)
                 # TODO: redistribute keys based on the new number of servers
+                
 
         def leave(self, server: str):
             if server in self.servers:
                 self.servers.remove(server)
                 # TODO: redistribute keys based on the new number of servers
+                #KVStorageSimpleService.redistribute(server, KEYS_LOWER_THRESHOLD, KEYS_UPPER_THRESHOLD)
 
         def query(self, key: int) -> str:
             num_servers = len(self.servers)

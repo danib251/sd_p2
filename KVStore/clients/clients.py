@@ -72,7 +72,7 @@ class ShardClient(SimpleClient):
     def get(self, key: int) -> Union[str, None]:
         # Query shard master for destination server
         request = GetRequest(key=key)
-        response = self.stub.Get(request)
+        response = self.stub.Query(request)
          
         # Direct storage request to destination server
         if response.server:
@@ -100,7 +100,7 @@ class ShardClient(SimpleClient):
     def put(self, key: int, value: str):
         # Query shard master for destination server
         request = GetRequest(key=key)
-        response = self.stub.Get(request)
+        response = self.stub.Query(request)
 
         # Direct storage request to destination server
         if response.server:
