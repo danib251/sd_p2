@@ -70,9 +70,20 @@ class ShardClient(SimpleClient):
         """
 
     def get(self, key: int) -> Union[str, None]:
-        """
-        To fill with your code
-        """
+        # Query shard master for destination server
+        request = GetRequest(key=key)
+        response = self.stub.Get(request)
+         
+        # Direct storage request to destination server
+        if response.server:
+            destination_server = response.server
+            with grpc.insecure_channel(destination_server) as channel:
+                storage_stub = KVStoreStub(channel)
+                get_request = GetRequest(key=key)
+                get_response = storage_stub.Get(get_request)
+                if get_response.value:
+                    return _get_return(response)
+        return None
 
     def l_pop(self, key: int) -> Union[str, None]:
         """
@@ -87,9 +98,17 @@ class ShardClient(SimpleClient):
 
 
     def put(self, key: int, value: str):
-        """
-        To fill with your code
-        """
+        # Query shard master for destination server
+        request = GetRequest(key=key)
+        response = self.stub.Get(request)
+
+        # Direct storage request to destination server
+        if response.server:
+            destination_server = response.server
+            with grpc.insecure_channel(destination_server) as channel:
+                storage_stub = KVStoreStub(channel)
+                put_request = PutRequest(key=key, value=value)
+                storage_stub.Put(put_request)
 
 
     def append(self, key: int, value: str):

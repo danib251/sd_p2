@@ -55,7 +55,7 @@ class KVStorageSimpleService(KVStorageService):
     def __init__(self):
         self.storage = {}
         self.lock = threading.Lock()
-
+        
     def get(self, key: int) -> Union[str, None]:
         with self.lock:
             if key in self.storage:
@@ -98,27 +98,21 @@ class KVStorageSimpleService(KVStorageService):
                 
 
     def redistribute(self, destination_server: str, lower_val: int, upper_val: int):
-        keys_to_remove = []
-        keys_to_transfer = {}
+        keys_to_transfer = []
         for key, value in self.storage.items():
-            if lower_val <= key <= upper_val:
-                keys_to_transfer[key] = value
-                keys_to_remove.append(key)
-        for key in keys_to_remove:
-            del self.storage[key]
-        try:
-            with SimpleClient(destination_server) as client:
-                client.transfer(keys_to_transfer)
-        except Exception as e:
-            # Re-insert transferred keys in case of error
-            for key, value in keys_to_transfer.items():
-                self.storage[key] = value
-            raise e
+            if lower_val <= key < upper_val:
+                keys_to_transfer.append(KeyValue(key=key, value=value))
+
+        with grpc.insecure_channel(destination_server) as channel:
+            stub = KVStoreStub(channel)
+            stub.Transfer(keys_values=keys_to_transfer)
+
+        for kv in keys_to_transfer:
+            del self.storage[kv.key]
 
     def transfer(self, keys_values: List[KeyValue]):
-        for key, value in keys_values:
-            self.storage[key] = value
-
+        for kv in keys_values:
+            self.storage[kv.key] = kv.value
 
 class KVStorageReplicasService(KVStorageSimpleService):
     role: Role
@@ -209,14 +203,16 @@ class KVStorageServicer(KVStoreServicer):
         self.storage_service.append(key, value)
         return google_dot_protobuf_dot_empty__pb2.Empty()
     def Redistribute(self, request: RedistributeRequest, context) -> google_dot_protobuf_dot_empty__pb2.Empty:
-        """
-        To fill with your code
-        """
+        destination_server = request.destination_server
+        lower_val = request.lower_val
+        upper_val = request.upper_val
+        self.storage_service.redistribute(destination_server, lower_val, upper_val)
+        return google_dot_protobuf_dot_empty__pb2.Empty()
 
     def Transfer(self, request: TransferRequest, context) -> google_dot_protobuf_dot_empty__pb2.Empty:
-        """
-        To fill with your code
-        """
+        keys_values = request.keys_values
+        self.storage_service.transfer(keys_values)
+        return google_dot_protobuf_dot_empty__pb2.Empty()
 
     def AddReplica(self, request: ServerRequest, context) -> google_dot_protobuf_dot_empty__pb2.Empty:
         """
