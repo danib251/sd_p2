@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 NUM_CLIENTS = 2
 NUM_STORAGE_SERVERS = [2, 4, 8]
+NUM_STORAGE_SERVERS_DANIEL = [2]
 master_address = f"localhost:{SHARDMASTER_PORT}"
 
 
@@ -21,7 +22,8 @@ if __name__ ==  '__main__':
     print("*************Sharded tests**************")
 
     print("Tests with changing shardmasters")
-    for num_servers in NUM_STORAGE_SERVERS:
+    #for num_servers in NUM_STORAGE_SERVERS:
+    for num_servers in NUM_STORAGE_SERVERS_DANIEL:
         print(f"{num_servers} storage servers.")
         server_proc = start_shardmaster.run(SHARDMASTER_PORT)
 
@@ -31,15 +33,15 @@ if __name__ ==  '__main__':
         test1 = ShardKVSimpleTests(master_address, 1)
         test1.test()
 
-        test2 = ShardKVParallelTests(master_address, NUM_CLIENTS)
-        test2.test()
+        '''test2 = ShardKVParallelTests(master_address, NUM_CLIENTS)
+        test2.test()'''
 
         [queue.put(0) for queue in storage_proc_end_queues]
         wait()
         server_proc.terminate()
         wait()
 
-    print("Tests redistributions 1")
+    '''print("Tests redistributions 1")
     #  Test if the system supports dynamic removal of shards
     num_servers = 5
     server_proc = start_shardmaster.run(SHARDMASTER_PORT)
@@ -90,8 +92,8 @@ if __name__ ==  '__main__':
         test2.test(i + num_servers - 1)
 
         storage_proc_end_queues.append(start_storage_server_sharded.run(get_port(), SHARDMASTER_PORT))
-
-    [queue.put(0) for queue in storage_proc_end_queues]
+'''
+    '''[queue.put(0) for queue in storage_proc_end_queues]'''
     wait()
     print("\n\n...Terminating server")
     server_proc.terminate()

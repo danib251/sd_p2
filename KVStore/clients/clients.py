@@ -89,15 +89,39 @@ class ShardClient(SimpleClient):
         
 
     def l_pop(self, key: int) -> Union[str, None]:
-        """
-        To fill with your code
-        """
+        # Query shard master for destination server
+        request = QueryRequest(key=key)
+        response = self.stub.Query(request)
+         
+        # Direct storage request to destination server
+        if response.server:
+            destination_server = response.server
+            with grpc.insecure_channel(destination_server) as channel:
+                storage_stub = KVStoreStub(channel)
+                l_pop_request = GetRequest(key=key)
+                l_pop_response = storage_stub.LPop(l_pop_request)
+                if l_pop_response.value:
+                    return l_pop_response.value
+                else:   
+                    return None
 
 
     def r_pop(self, key: int) -> Union[str, None]:
-        """
-        To fill with your code
-        """
+        # Query shard master for destination server
+        request = QueryRequest(key=key)
+        response = self.stub.Query(request)
+         
+        # Direct storage request to destination server
+        if response.server:
+            destination_server = response.server
+            with grpc.insecure_channel(destination_server) as channel:
+                storage_stub = KVStoreStub(channel)
+                r_pop_request = GetRequest(key=key)
+                r_pop_response = storage_stub.RPop(r_pop_request)
+                if r_pop_response.value:
+                    return r_pop_response.value
+                else:   
+                    return None
 
 
     def put(self, key: int, value: str):
@@ -115,9 +139,16 @@ class ShardClient(SimpleClient):
 
 
     def append(self, key: int, value: str):
-        """
-        To fill with your code
-        """
+        request = QueryRequest(key=key)
+        response = self.stub.Query(request)
+
+        # Direct storage request to destination server
+        if response.server:
+            destination_server = response.server
+            with grpc.insecure_channel(destination_server) as channel:
+                storage_stub = KVStoreStub(channel)
+                appened_request = AppendRequest(key=key, value=value)
+                storage_stub.Append(appened_request)
 
 
 class ShardReplicaClient(ShardClient):
