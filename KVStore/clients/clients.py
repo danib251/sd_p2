@@ -71,7 +71,7 @@ class ShardClient(SimpleClient):
 
     def get(self, key: int) -> Union[str, None]:
         # Query shard master for destination server
-        request = GetRequest(key=key)
+        request = QueryRequest(key=key)
         response = self.stub.Query(request)
          
         # Direct storage request to destination server
@@ -82,8 +82,11 @@ class ShardClient(SimpleClient):
                 get_request = GetRequest(key=key)
                 get_response = storage_stub.Get(get_request)
                 if get_response.value:
-                    return _get_return(response)
-        return None
+                    return get_response.value
+                else:   
+                    return None
+                    
+        
 
     def l_pop(self, key: int) -> Union[str, None]:
         """
@@ -99,7 +102,7 @@ class ShardClient(SimpleClient):
 
     def put(self, key: int, value: str):
         # Query shard master for destination server
-        request = GetRequest(key=key)
+        request = QueryRequest(key=key)
         response = self.stub.Query(request)
 
         # Direct storage request to destination server

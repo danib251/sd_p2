@@ -74,7 +74,7 @@ class ShardMasterSimpleService(ShardMasterService):
                     KVStorageSimpleService.redistribute(s, lower_val, upper_val)
                     lower_val = upper_val
 
-                
+        '''
 
         def query(self, key: int) -> str:
             num_servers = len(self.servers)
@@ -85,7 +85,7 @@ class ShardMasterSimpleService(ShardMasterService):
             shard_index = key // shard_size  # index of the shard that contains the key
 
             # return the address of the server that owns the shard
-            return self.servers[shard_index % num_servers]'''
+            return self.servers[shard_index % num_servers]
 
 
 class ShardMasterReplicasService(ShardMasterSimpleService):
