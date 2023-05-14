@@ -98,17 +98,26 @@ class KVStorageSimpleService(KVStorageService):
                 
 
     def redistribute(self, destination_server: str, lower_val: int, upper_val: int):
-        keys_to_transfer = []
+        print("Redistributing keys to server: %s" % destination_server)
+        # Get the keys that should be moved to the destination server
+        keys_to_move = []
         for key, value in self.storage.items():
-            if lower_val <= key < upper_val:
-                keys_to_transfer.append(KeyValue(key=key, value=value))
+            if lower_val <= key <= upper_val:
+                keys_to_move.append(key)
 
+        # Create a list with the key-value pairs to be moved
+        kv_pairs_to_move = [(key, self.storage[key]) for key in keys_to_move]
+
+        # Delete the keys from the local storage
+        for key in keys_to_move:
+            del self.storage[key]
+
+        # Connect to the destination server and transfer the keys
         with grpc.insecure_channel(destination_server) as channel:
-            stub = KVStoreStub(channel)
-            stub.Transfer(keys_values=keys_to_transfer)
+            storage_stub = KVStoreStub(channel)
+            transfer_request = TransferRequest(keys_values=kv_pairs_to_move)
+            storage_stub.Transfer(transfer_request)
 
-        for kv in keys_to_transfer:
-            del self.storage[kv.key]
 
     def transfer(self, keys_values: List[KeyValue]):
         for kv in keys_values:

@@ -5,7 +5,8 @@ from KVStore.protos.kv_store_pb2_grpc import KVStoreStub
 from KVStore.protos.kv_store_shardmaster_pb2_grpc import ShardMasterServicer
 from KVStore.protos.kv_store_shardmaster_pb2 import *
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
-from KVStore.kvstorage.kvstorage import KVStorageSimpleService
+from KVStore.kvstorage.kvstorage import KVStorageSimpleService 
+import grpc
 logger = logging.getLogger(__name__)
 
 
@@ -29,18 +30,51 @@ class ShardMasterService:
 class ShardMasterSimpleService(ShardMasterService):
         def __init__(self):
            self.servers = []  # list of servers' addresses
+           
 
         def join(self, server: str):
             if server not in self.servers:
                 self.servers.append(server)
-                # TODO: redistribute keys based on the new number of servers
+                num_servers = len(self.servers)
+
+                # Calculate lower and upper value for the new server's shard
+                shard_size = KEYS_UPPER_THRESHOLD // num_servers
+                lower_val = (num_servers - 1) * shard_size
+                upper_val = KEYS_UPPER_THRESHOLD if num_servers == 1 else lower_val + shard_size - 1
+                
+                # create a RedistributeRequest protobuf message with the necessary parameters
+                request = RedistributeRequest(
+                    destination_server=server,
+                    lower_val=lower_val,
+                    upper_val=upper_val
+                )
+                self.channel = grpc.insecure_channel(server)
+                self.stub = KVStoreStub(self.channel)
+                response = self.stub.Redistribute(request)
+                # make the RPC call to the Redistribute function using the gRPC client
+                
+
                 
 
         def leave(self, server: str):
             if server in self.servers:
+                # Remove server from the list
                 self.servers.remove(server)
-                # TODO: redistribute keys based on the new number of servers
-                #KVStorageSimpleService.redistribute(server, KEYS_LOWER_THRESHOLD, KEYS_UPPER_THRESHOLD)
+                
+                '''# Update shard ranges
+                shard_size = KEYS_UPPER_THRESHOLD // len(self.servers)
+                lower_val = 0
+                
+                for idx, s in enumerate(self.servers):
+                    upper_val = lower_val + shard_size
+                    if idx == len(self.servers) - 1:
+                        upper_val = KEYS_UPPER_THRESHOLD
+                        
+                    # Redistribute shards
+                    KVStorageSimpleService.redistribute(s, lower_val, upper_val)
+                    lower_val = upper_val
+
+                
 
         def query(self, key: int) -> str:
             num_servers = len(self.servers)
@@ -51,7 +85,7 @@ class ShardMasterSimpleService(ShardMasterService):
             shard_index = key // shard_size  # index of the shard that contains the key
 
             # return the address of the server that owns the shard
-            return self.servers[shard_index % num_servers]
+            return self.servers[shard_index % num_servers]'''
 
 
 class ShardMasterReplicasService(ShardMasterSimpleService):
@@ -86,6 +120,7 @@ class ShardMasterServicer(ShardMasterServicer):
 
     def Join(self, request: JoinRequest, context) -> google_dot_protobuf_dot_empty__pb2.Empty:
         self.shard_master_service.join(request.server)
+       
         return google_dot_protobuf_dot_empty__pb2.Empty()
 
     def Leave(self, request: LeaveRequest, context) -> google_dot_protobuf_dot_empty__pb2.Empty:
