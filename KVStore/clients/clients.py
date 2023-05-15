@@ -23,31 +23,20 @@ class SimpleClient:
     def get(self, key: int) -> Union[str, None]:
         request = GetRequest(key=key)
         response = self.stub.Get(request)
-        result = _get_return(response)
-        if result is not None:
-            return response.value
-        else:
-            return None
+        return _get_return(response)
+        
 
 
     def l_pop(self, key: int) -> Union[str, None]:
         request = GetRequest(key=key)
         response = self.stub.LPop(request)
-        result = _get_return(response)
-        if result is not None:
-            return response.value
-        else:
-            return None
-
+        return _get_return(response)
+        
 
     def r_pop(self, key: int) -> Union[str, None]:
         request = GetRequest(key=key)
         response = self.stub.RPop(request)
-        result = _get_return(response)
-        if result is not None:
-            return response.value
-        else:
-            return None
+        return _get_return(response)
 
     def put(self, key: int, value: str):
         request = PutRequest(key=key, value=value)
