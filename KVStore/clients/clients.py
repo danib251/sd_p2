@@ -81,10 +81,7 @@ class ShardClient(SimpleClient):
                 storage_stub = KVStoreStub(channel)
                 get_request = GetRequest(key=key)
                 get_response = storage_stub.Get(get_request)
-                if get_response.value:
-                    return get_response.value
-                else:   
-                    return None
+                return _get_return(get_response)
                     
         
 
@@ -100,10 +97,8 @@ class ShardClient(SimpleClient):
                 storage_stub = KVStoreStub(channel)
                 l_pop_request = GetRequest(key=key)
                 l_pop_response = storage_stub.LPop(l_pop_request)
-                if l_pop_response.value:
-                    return l_pop_response.value
-                else:   
-                    return None
+                return _get_return(l_pop_response)
+                
 
 
     def r_pop(self, key: int) -> Union[str, None]:
@@ -118,10 +113,8 @@ class ShardClient(SimpleClient):
                 storage_stub = KVStoreStub(channel)
                 r_pop_request = GetRequest(key=key)
                 r_pop_response = storage_stub.RPop(r_pop_request)
-                if r_pop_response.value:
-                    return r_pop_response.value
-                else:   
-                    return None
+                return _get_return(r_pop_response)
+               
 
 
     def put(self, key: int, value: str):
