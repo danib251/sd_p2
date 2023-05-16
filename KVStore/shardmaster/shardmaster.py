@@ -66,11 +66,51 @@ class ShardMasterSimpleService(ShardMasterService):
 
                 
 
-        def leave(self, server: str):
-            if server in self.servers:
-                # Remove server from the list
-                self.servers.remove(server)
+
+        def leave(self, server):
+            if server not in self.servers:
+                raise ValueError("The server is not present in the system")
+
+            num_servers = len(self.servers)
+
+            if num_servers == 0:
+                return  # No servers remaining, nothing to redistribute
+
+            shard_size = KEYS_UPPER_THRESHOLD // (num_servers )  # size of each shard
+            last_shard_size = KEYS_UPPER_THRESHOLD // (num_servers -1)
+            # Redistribute the keys of all servers
+            for i, s in enumerate(self.servers[2:]):
+                shard_size = i * shard_size
+                upper_val = (i + 1) * shard_size +1 if i != num_servers - 1 else KEYS_UPPER_THRESHOLD
+                max_upper_val = (i + 1) * last_shard_size
+                print("lower_val: ", shard_size)
+                print("upper_val: ", upper_val)
+                print("max_upper_val: ", max_upper_val)
+                print("i: ", i)
+                # create a RedistributeRequest protobuf message with the necessary parameters
+                request = RedistributeRequest(
+                    destination_server=self.servers[i],
+                    lower_val=upper_val,
+                    upper_val=max_upper_val
+                )
+
+                self.channel = grpc.insecure_channel(s)
+                self.stub = KVStoreStub(self.channel)
+                response = self.stub.Redistribute(request)
+
+                # create a RedistributeRequest protobuf message with the necessary parameters
+                request = RedistributeRequest(
+                    destination_server=server,
+                    lower_val=(KEYS_UPPER_THRESHOLD) - shard_size,
+                    upper_val=KEYS_UPPER_THRESHOLD
+                )
+                self.channel = grpc.insecure_channel(server)
+                self.stub = KVStoreStub(self.channel)
+                response = self.stub.Redistribute(request)        
                 
+                
+                self.servers.remove(server)
+
                 
         
 
