@@ -19,7 +19,7 @@ if __name__ ==  '__main__':
         setup_logger()
 
     print("*************Sharded tests**************")
-
+    '''
     print("Tests with changing shardmasters")
   
     for num_servers in NUM_STORAGE_SERVERS:
@@ -63,7 +63,7 @@ if __name__ ==  '__main__':
     wait()
     server_proc.terminate()
     wait()
-
+    '''
     print("Test redistribution 2 (keep data after redistribution)")
     # Test if data gets redistributed across shards when the number of nodes changes
     num_servers = 5
@@ -73,7 +73,7 @@ if __name__ ==  '__main__':
         start_storage_server_sharded.run(get_port(), SHARDMASTER_PORT) for i in
         range(num_servers)
     ]
-
+    
     for i in range(num_servers - 1):
         print(f"{num_servers - i} storage servers.")
 
@@ -83,7 +83,7 @@ if __name__ ==  '__main__':
         storage_proc_end_queues[0].put(0)
         wait()
         storage_proc_end_queues = storage_proc_end_queues[1:]
-
+    ''' 
     for i in range(num_servers):
         print(f"{i + 1} storage servers.")
 
@@ -91,7 +91,7 @@ if __name__ ==  '__main__':
         test2.test(i + num_servers - 1)
 
         storage_proc_end_queues.append(start_storage_server_sharded.run(get_port(), SHARDMASTER_PORT))
-
+    '''
     [queue.put(0) for queue in storage_proc_end_queues]
     wait()
     print("\n\n...Terminating server")

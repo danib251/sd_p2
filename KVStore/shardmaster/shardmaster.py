@@ -62,10 +62,7 @@ class ShardMasterSimpleService(ShardMasterService):
                     )
                     self.channel = grpc.insecure_channel(server)
                     self.stub = KVStoreStub(self.channel)
-                    response = self.stub.Redistribute(request)
-                    
-            
-                
+                    response = self.stub.Redistribute(request)              
 
                 
 
