@@ -72,13 +72,15 @@ class ShardMasterSimpleService(ShardMasterService):
                 raise ValueError("The server is not present in the system")
 
             num_servers = len(self.servers)
-
+            print("self.servers: ", len(self.servers))
             if num_servers != 1:
 
                 shard_size = KEYS_UPPER_THRESHOLD // (num_servers -1)
                 last_shard_size = KEYS_UPPER_THRESHOLD // (num_servers)
                 # Redistribute the keys of all servers
+                
                 for i, s in enumerate(self.servers[2:]):
+                    print("i: ", i)
                     upper_val = (i + 1) * shard_size if i != num_servers - 1 else KEYS_UPPER_THRESHOLD 
                     max_upper_val = (i + 1) * last_shard_size
                     # create a RedistributeRequest protobuf message with the necessary parameters
@@ -101,10 +103,11 @@ class ShardMasterSimpleService(ShardMasterService):
                 )
                 self.channel = grpc.insecure_channel(server)
                 self.stub = KVStoreStub(self.channel)
-                response = self.stub.Redistribute(request)        
-                self.servers.remove(server)
-            else:
-                self.servers.remove(server)    
+                response = self.stub.Redistribute(request)
+                print("remove:", server, "from self.servers")
+            self.servers.remove(server)         
+                
+               
                 
         
 
