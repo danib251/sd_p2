@@ -73,44 +73,38 @@ class ShardMasterSimpleService(ShardMasterService):
 
             num_servers = len(self.servers)
 
-            if num_servers == 0:
-                return  # No servers remaining, nothing to redistribute
+            if num_servers != 1:
 
-            shard_size = KEYS_UPPER_THRESHOLD // (num_servers )  # size of each shard
-            last_shard_size = KEYS_UPPER_THRESHOLD // (num_servers -1)
-            # Redistribute the keys of all servers
-            for i, s in enumerate(self.servers[2:]):
-                shard_size = i * shard_size
-                upper_val = (i + 1) * shard_size +1 if i != num_servers - 1 else KEYS_UPPER_THRESHOLD
-                max_upper_val = (i + 1) * last_shard_size
-                print("lower_val: ", shard_size)
-                print("upper_val: ", upper_val)
-                print("max_upper_val: ", max_upper_val)
-                print("i: ", i)
-                # create a RedistributeRequest protobuf message with the necessary parameters
-                request = RedistributeRequest(
-                    destination_server=self.servers[i],
-                    lower_val=upper_val,
-                    upper_val=max_upper_val
-                )
+                shard_size = KEYS_UPPER_THRESHOLD // (num_servers -1)
+                last_shard_size = KEYS_UPPER_THRESHOLD // (num_servers)
+                # Redistribute the keys of all servers
+                for i, s in enumerate(self.servers[2:]):
+                    upper_val = (i + 1) * shard_size if i != num_servers - 1 else KEYS_UPPER_THRESHOLD 
+                    max_upper_val = (i + 1) * last_shard_size
+                    # create a RedistributeRequest protobuf message with the necessary parameters
+                    request = RedistributeRequest(
+                        destination_server=self.servers[i],
+                        lower_val=upper_val,
+                        upper_val=max_upper_val
+                    )
 
-                self.channel = grpc.insecure_channel(s)
-                self.stub = KVStoreStub(self.channel)
-                response = self.stub.Redistribute(request)
+                    self.channel = grpc.insecure_channel(s)
+                    self.stub = KVStoreStub(self.channel)
+                    response = self.stub.Redistribute(request)
 
                 # create a RedistributeRequest protobuf message with the necessary parameters
+                print("shard_size: ", shard_size)
                 request = RedistributeRequest(
-                    destination_server=server,
-                    lower_val=(KEYS_UPPER_THRESHOLD) - shard_size,
+                    destination_server=self.servers[-2],
+                    lower_val=(KEYS_UPPER_THRESHOLD) - last_shard_size,
                     upper_val=KEYS_UPPER_THRESHOLD
                 )
                 self.channel = grpc.insecure_channel(server)
                 self.stub = KVStoreStub(self.channel)
                 response = self.stub.Redistribute(request)        
-                
-                
                 self.servers.remove(server)
-
+            else:
+                self.servers.remove(server)    
                 
         
 
@@ -123,6 +117,10 @@ class ShardMasterSimpleService(ShardMasterService):
             shard_index = key // shard_size  # index of the shard that contains the key
 
             # return the address of the server that owns the shard
+            ''' print ("num_servers: ", num_servers)
+            print("key: ", key)
+            print("shard_index: ", shard_index)'''
+            
             return self.servers[shard_index % num_servers]
 
 

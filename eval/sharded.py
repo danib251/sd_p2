@@ -19,7 +19,7 @@ if __name__ ==  '__main__':
         setup_logger()
 
     print("*************Sharded tests**************")
-    '''
+    
     print("Tests with changing shardmasters")
   
     for num_servers in NUM_STORAGE_SERVERS:
@@ -63,7 +63,7 @@ if __name__ ==  '__main__':
     wait()
     server_proc.terminate()
     wait()
-    '''
+    
     print("Test redistribution 2 (keep data after redistribution)")
     # Test if data gets redistributed across shards when the number of nodes changes
     
