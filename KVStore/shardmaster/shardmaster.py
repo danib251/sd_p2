@@ -82,14 +82,17 @@ class ShardMasterSimpleService(ShardMasterService):
                 for i in range(len(self.servers) - 2, -1, -1):
                     upper_val = (i + 1) * shard_size if i != num_servers - 1 else KEYS_UPPER_THRESHOLD 
                     max_upper_val = (i + 1) * last_shard_size
+                    print("upper_val: ", upper_val)
+                    print("max_upper_val: ", max_upper_val)
                     destination_server = self.servers[i+1]
-
+                    print("destination_server: ", destination_server)
                     request = RedistributeRequest(
                         destination_server=destination_server,
                         lower_val=upper_val,
                         upper_val=max_upper_val
                     )
-
+                    print("self.servers[i]: ", self.servers[i])
+                    print("list: ", self.servers)
                     self.channel = grpc.insecure_channel(self.servers[i])
                     self.stub = KVStoreStub(self.channel)
                     response = self.stub.Redistribute(request)

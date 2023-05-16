@@ -66,7 +66,7 @@ if __name__ ==  '__main__':
     server_proc.terminate()
     wait()
     print("End of test 4")
-    '''
+    
     print("Test redistribution 2 (keep data after redistribution)")
     # Test if data gets redistributed across shards when the number of nodes changes
     num_servers = 5
@@ -95,7 +95,7 @@ if __name__ ==  '__main__':
 
         storage_proc_end_queues.append(start_storage_server_sharded.run(get_port(), SHARDMASTER_PORT))
 
-    [queue.put(0) for queue in storage_proc_end_queues]'''
+    [queue.put(0) for queue in storage_proc_end_queues]
     wait()
     print("\n\n...Terminating server")
     server_proc.terminate()
