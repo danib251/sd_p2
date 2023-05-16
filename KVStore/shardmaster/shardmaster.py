@@ -79,7 +79,7 @@ class ShardMasterSimpleService(ShardMasterService):
             if num_servers == 0:
                 raise ValueError("There are no servers in the system")
 
-            shard_size = (1 << 32) // num_servers  # size of each shard
+            shard_size = KEYS_UPPER_THRESHOLD // num_servers  # size of each shard (considerando un máximo de 100 keys)
             shard_index = key // shard_size  # index of the shard that contains the key
 
             # return the address of the server that owns the shard
