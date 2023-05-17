@@ -132,9 +132,9 @@ class KVStorageSimpleService(KVStorageService):
 
 
     def transfer(self, keys_values: List[KeyValue]):
-        with self.lock:
             for kv in keys_values:
                 self.storage[kv.key] = kv.value
+                
 
 class KVStorageReplicasService(KVStorageSimpleService):
     role: Role

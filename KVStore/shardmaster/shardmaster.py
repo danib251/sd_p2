@@ -62,18 +62,18 @@ class ShardMasterSimpleService(ShardMasterService):
                             lower_val=(KEYS_UPPER_THRESHOLD) - shard_size,
                             upper_val=KEYS_UPPER_THRESHOLD
                         )
-                        self.channel = grpc.insecure_channel(server)
+                        self.channel = grpc.insecure_channel(self.servers[-2])
                         self.stub = KVStoreStub(self.channel)
                         response = self.stub.Redistribute(request)              
-                #print("servers created: ", server)
-                #print("self.servers created: ", self.servers)    
+                print("servers created: ", server)
+                print("self.servers created: ", self.servers)    
 
 
         def leave(self, server: str):
             with self.lock:
                 if server not in self.servers:
                     raise ValueError("The server is not present in the system")
-
+                posicion = self.servers.index(server)
                 num_servers = len(self.servers)
                 
                 last_shard_size = KEYS_UPPER_THRESHOLD // num_servers
@@ -109,8 +109,8 @@ class ShardMasterSimpleService(ShardMasterService):
                     self.servers.remove(server)         
                 else:
                     self.servers.remove(server)    
-                #print("servers deleted: ", server)
-                #print("self.servers deleted : ", self.servers)    
+                print("servers deleted: ", server)
+                print("self.servers deleted : ", self.servers)    
         
 
         def query(self, key: int) -> str:
