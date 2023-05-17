@@ -59,9 +59,12 @@ class KVStorageSimpleService(KVStorageService):
     def get(self, key: int) -> Union[str, None]:
         with self.lock:
             if key in self.storage:
+                print("Key %d not found" % key)
+                print("Current storage: %s" % self.storage[key])
                 return self.storage[key]
             else:
                 return None
+            
 
     def l_pop(self, key: int) -> Union[str, None]:
         with self.lock:
@@ -95,40 +98,43 @@ class KVStorageSimpleService(KVStorageService):
                 self.storage[key] = self.storage[key] + value  
             else:
                 self.storage[key] = value
-                
+            print("Appended %s to key %d" % (value, key))
+            print("New value: %s" % self.storage[key])    
 
     def redistribute(self, destination_server: str, lower_val: int, upper_val: int):
-        print("Redistributing keys to server: %s" % destination_server)
-        # Get the keys that should be moved to the destination server
-        keys_to_move = []
-        for key, value in self.storage.items():
-            if lower_val <= key <= upper_val:
-                keys_to_move.append(key)
+        with self.lock:
+            print("Redistributing keys to server: %s" % destination_server)
+            # Get the keys that should be moved to the destination server
+            keys_to_move = []
+            for key, value in self.storage.items():
+                if lower_val <= key <= upper_val:
+                    keys_to_move.append(key)
 
-        # Create a list with the key-value pairs to be moved
-        kv_pairs_to_move = []
-        for key, value in self.storage.items():
-            if lower_val <= key <= upper_val:
-                kv = KeyValue()
-                kv.key = key
-                kv.value = value
-                kv_pairs_to_move.append(kv)
+            # Create a list with the key-value pairs to be moved
+            kv_pairs_to_move = []
+            for key, value in self.storage.items():
+                if lower_val <= key <= upper_val:
+                    kv = KeyValue()
+                    kv.key = key
+                    kv.value = value
+                    kv_pairs_to_move.append(kv)
 
-        if kv_pairs_to_move:
-            # Delete the keys from the local storage
-            for key in keys_to_move:
-                del self.storage[key]
+            if kv_pairs_to_move:
+                # Delete the keys from the local storage
+                for key in keys_to_move:
+                    del self.storage[key]
 
-            # Connect to the destination server and transfer the keys
-            with grpc.insecure_channel(destination_server) as channel:
-                storage_stub = KVStoreStub(channel)
-                transfer_request = TransferRequest(keys_values=kv_pairs_to_move)
-                storage_stub.Transfer(transfer_request)
+                # Connect to the destination server and transfer the keys
+                with grpc.insecure_channel(destination_server) as channel:
+                    storage_stub = KVStoreStub(channel)
+                    transfer_request = TransferRequest(keys_values=kv_pairs_to_move)
+                    storage_stub.Transfer(transfer_request)
 
 
     def transfer(self, keys_values: List[KeyValue]):
-        for kv in keys_values:
-            self.storage[kv.key] = kv.value
+        with self.lock:
+            for kv in keys_values:
+                self.storage[kv.key] = kv.value
 
 class KVStorageReplicasService(KVStorageSimpleService):
     role: Role

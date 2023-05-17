@@ -7,6 +7,7 @@ from KVStore.protos.kv_store_shardmaster_pb2 import *
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 from KVStore.kvstorage.kvstorage import KVStorageSimpleService 
 import grpc
+import threading
 logger = logging.getLogger(__name__)
 
 
@@ -30,88 +31,86 @@ class ShardMasterService:
 class ShardMasterSimpleService(ShardMasterService):
         def __init__(self):
            self.servers = []  # list of servers' addresses
-           
+           self.lock = threading.Lock()
 
         def join(self, server: str):
-            if server not in self.servers:
-                self.servers.append(server)
-                num_servers = len(self.servers)
-                if num_servers != 1:
-                    # Calculate lower and upper value for the new server's shard
-                    shard_size = KEYS_UPPER_THRESHOLD // num_servers
-                    last_shard_size = KEYS_UPPER_THRESHOLD // (num_servers -1)
-                    # Redistribute the keys of all servers
-                    for i, s in enumerate(self.servers[:-2]):
-                        lower_val = i * shard_size
-                        upper_val = (i + 1) * shard_size - 1 if i != num_servers - 1 else KEYS_UPPER_THRESHOLD 
-                        max_upper_val = (i + 1) * last_shard_size
+            with self.lock:
+                if server not in self.servers:
+                    self.servers.append(server)
+                    num_servers = len(self.servers)
+                    if num_servers != 1:
+                        # Calculate lower and upper value for the new server's shard
+                        shard_size = KEYS_UPPER_THRESHOLD // num_servers
+                        last_shard_size = KEYS_UPPER_THRESHOLD // (num_servers -1)
+                        # Redistribute the keys of all servers
+                        for i, s in enumerate(self.servers[:-2]):
+                            lower_val = i * shard_size
+                            upper_val = (i + 1) * shard_size - 1 if i != num_servers - 1 else KEYS_UPPER_THRESHOLD 
+                            max_upper_val = (i + 1) * last_shard_size
+                            request = RedistributeRequest(
+                                destination_server=self.servers[i+1],
+                                lower_val=upper_val,
+                                upper_val=max_upper_val
+                            )
+                            self.channel = grpc.insecure_channel(s)
+                            self.stub = KVStoreStub(self.channel)
+                            response = self.stub.Redistribute(request)
+
+                        # create a RedistributeRequest protobuf message with the necessary parameters
                         request = RedistributeRequest(
-                            destination_server=self.servers[i+1],
-                            lower_val=upper_val,
-                            upper_val=max_upper_val
+                            destination_server=server,
+                            lower_val=(KEYS_UPPER_THRESHOLD) - shard_size,
+                            upper_val=KEYS_UPPER_THRESHOLD
                         )
-                        self.channel = grpc.insecure_channel(s)
+                        self.channel = grpc.insecure_channel(server)
                         self.stub = KVStoreStub(self.channel)
-                        response = self.stub.Redistribute(request)
-
-                    # create a RedistributeRequest protobuf message with the necessary parameters
-                    request = RedistributeRequest(
-                        destination_server=server,
-                        lower_val=(KEYS_UPPER_THRESHOLD) - shard_size,
-                        upper_val=KEYS_UPPER_THRESHOLD
-                    )
-                    self.channel = grpc.insecure_channel(server)
-                    self.stub = KVStoreStub(self.channel)
-                    response = self.stub.Redistribute(request)              
-
-                
+                        response = self.stub.Redistribute(request)              
+                #print("servers created: ", server)
+                #print("self.servers created: ", self.servers)    
 
 
         def leave(self, server: str):
-            if server not in self.servers:
-                raise ValueError("The server is not present in the system")
+            with self.lock:
+                if server not in self.servers:
+                    raise ValueError("The server is not present in the system")
 
-            num_servers = len(self.servers)
-            
-            #print("self.servers: ", len(self.servers))
-            if num_servers != 1:
-                shard_size = KEYS_UPPER_THRESHOLD // (num_servers - 1)
+                num_servers = len(self.servers)
+                
                 last_shard_size = KEYS_UPPER_THRESHOLD // num_servers
+                #print("self.servers: ", len(self.servers))
+                if num_servers != 1:
+                    shard_size = KEYS_UPPER_THRESHOLD // (num_servers - 1)
+                    # Redistribute the keys of all servers in reverse order
+                    sublist= self.servers[:-2]
+                    for i, s in enumerate(sublist):
+                        upper_val = (i + 1) * last_shard_size -1
+                        max_upper_val = (i + 1) * last_shard_size + (i + 1) * shard_size - (i + 1) * last_shard_size -1
+                        destination_server = self.servers[i+1]
+                        request = RedistributeRequest(
+                            destination_server=s,
+                            lower_val=upper_val,
+                            upper_val=max_upper_val
+                        )
+                        self.channel = grpc.insecure_channel(self.servers[i])
+                        self.stub = KVStoreStub(self.channel)
+                        response = self.stub.Redistribute(request)
 
-                # Redistribute the keys of all servers in reverse order
-                for i in range(len(self.servers) - 2, -1, -1):
-                    upper_val = (i + 1) * shard_size if i != num_servers - 1 else KEYS_UPPER_THRESHOLD 
-                    max_upper_val = (i + 1) * last_shard_size
-                    print("upper_val: ", upper_val)
-                    print("max_upper_val: ", max_upper_val)
-                    destination_server = self.servers[i+1]
-                    print("destination_server: ", destination_server)
+                    # Perform redistribution for the last server
                     request = RedistributeRequest(
-                        destination_server=destination_server,
-                        lower_val=upper_val,
-                        upper_val=max_upper_val
+                        destination_server=self.servers[-2],
+                        lower_val=KEYS_UPPER_THRESHOLD - last_shard_size,
+                        upper_val=KEYS_UPPER_THRESHOLD
                     )
-                    print("self.servers[i]: ", self.servers[i])
-                    print("list: ", self.servers)
-                    self.channel = grpc.insecure_channel(self.servers[i])
+
+                    self.channel = grpc.insecure_channel(server)
                     self.stub = KVStoreStub(self.channel)
                     response = self.stub.Redistribute(request)
 
-                # Perform redistribution for the last server
-                request = RedistributeRequest(
-                    destination_server=self.servers[-2],
-                    lower_val=KEYS_UPPER_THRESHOLD - last_shard_size,
-                    upper_val=KEYS_UPPER_THRESHOLD
-                )
-
-                self.channel = grpc.insecure_channel(server)
-                self.stub = KVStoreStub(self.channel)
-                response = self.stub.Redistribute(request)
-
-            self.servers.remove(server)         
-                
-               
-                
+                    self.servers.remove(server)         
+                else:
+                    self.servers.remove(server)    
+                #print("servers deleted: ", server)
+                #print("self.servers deleted : ", self.servers)    
         
 
         def query(self, key: int) -> str:
