@@ -142,43 +142,58 @@ class KVStorageReplicasService(KVStorageSimpleService):
     def __init__(self, consistency_level: int):
         super().__init__()
         self.consistency_level = consistency_level
-        """
-        To fill with your code
-        """
+        self.storage = {}
+        self.replicas = {}
+        self.lock = threading.Lock()
 
     def l_pop(self, key: int) -> str:
-        """
-        To fill with your code
-        """
+        with self.lock:
+            if key not in self.storage:
+                raise KeyError("Key does not exist")
+
+            value = self.storage[key]
+            del self.storage[key]
+
+            return value
 
     def r_pop(self, key: int) -> str:
-        """
-        To fill with your code
-        """
+        with self.lock:
+            if key not in self.storage:
+                raise KeyError("Key does not exist")
+
+            value = self.storage[key]
+            del self.storage[key]
+
+            return value
 
     def put(self, key: int, value: str):
-        """
-        To fill with your code
-        """
+        with self.lock:
+            self.storage[key] = value
 
     def append(self, key: int, value: str):
-        """
-        To fill with your code
-        """
+        with self.lock:
+            if key not in self.storage:
+                self.storage[key] = value
+            else:
+                self.storage[key] += value
 
     def add_replica(self, server: str):
-        """
-        To fill with your code
-        """
+        with self.lock:
+            if server in self.replicas:
+                raise ValueError("The replica is already present")
+
+            self.replicas[server] = True
 
     def remove_replica(self, server: str):
-        """
-        To fill with your code
-        """
+        with self.lock:
+            if server not in self.replicas:
+                raise ValueError("The replica is not present")
+
+            del self.replicas[server]
 
     def set_role(self, role: Role):
-        logger.info(f"Got role {role}")
-        self.role = role
+        with self.lock:
+            self.role = role
 
 
 class KVStorageServicer(KVStoreServicer):

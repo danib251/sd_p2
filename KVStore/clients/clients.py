@@ -15,6 +15,7 @@ def _get_return(ret: GetResponse) -> Union[str, None]:
     else:
         return None
 
+
 class SimpleClient:
     def __init__(self, kvstore_address: str):
         self.channel = grpc.insecure_channel(kvstore_address)
@@ -24,14 +25,11 @@ class SimpleClient:
         request = GetRequest(key=key)
         response = self.stub.Get(request)
         return _get_return(response)
-        
-
 
     def l_pop(self, key: int) -> Union[str, None]:
         request = GetRequest(key=key)
         response = self.stub.LPop(request)
         return _get_return(response)
-        
 
     def r_pop(self, key: int) -> Union[str, None]:
         request = GetRequest(key=key)
@@ -62,7 +60,7 @@ class ShardClient(SimpleClient):
         # Query shard master for destination server
         request = QueryRequest(key=key)
         response = self.stub.Query(request)
-         
+
         # Direct storage request to destination server
         if response.server:
             destination_server = response.server
@@ -71,14 +69,12 @@ class ShardClient(SimpleClient):
                 get_request = GetRequest(key=key)
                 get_response = storage_stub.Get(get_request)
                 return _get_return(get_response)
-                    
-        
 
     def l_pop(self, key: int) -> Union[str, None]:
         # Query shard master for destination server
         request = QueryRequest(key=key)
         response = self.stub.Query(request)
-         
+
         # Direct storage request to destination server
         if response.server:
             destination_server = response.server
@@ -87,14 +83,12 @@ class ShardClient(SimpleClient):
                 l_pop_request = GetRequest(key=key)
                 l_pop_response = storage_stub.LPop(l_pop_request)
                 return _get_return(l_pop_response)
-                
-
 
     def r_pop(self, key: int) -> Union[str, None]:
         # Query shard master for destination server
         request = QueryRequest(key=key)
         response = self.stub.Query(request)
-         
+
         # Direct storage request to destination server
         if response.server:
             destination_server = response.server
@@ -103,8 +97,6 @@ class ShardClient(SimpleClient):
                 r_pop_request = GetRequest(key=key)
                 r_pop_response = storage_stub.RPop(r_pop_request)
                 return _get_return(r_pop_response)
-               
-
 
     def put(self, key: int, value: str):
         # Query shard master for destination server
@@ -118,7 +110,6 @@ class ShardClient(SimpleClient):
                 storage_stub = KVStoreStub(channel)
                 put_request = PutRequest(key=key, value=value)
                 storage_stub.Put(put_request)
-
 
     def append(self, key: int, value: str):
         request = QueryRequest(key=key)
@@ -136,30 +127,65 @@ class ShardClient(SimpleClient):
 class ShardReplicaClient(ShardClient):
 
     def get(self, key: int) -> Union[str, None]:
-        """
-        To fill with your code
-        """
+        request = QueryReplicaRequest(key=key)
+        response = self.stub.QueryReplica(request)
+        server = response.server
+
+        if server:
+            with grpc.insecure_channel(server) as channel:
+                storage_stub = KVStoreStub(channel)
+                get_request = GetRequest(key=key)
+                get_response = storage_stub.Get(get_request)
+                return _get_return(get_response)
+        else:
+            return None
 
     def l_pop(self, key: int) -> Union[str, None]:
-        """
-        To fill with your code
-        """
+        request = QueryReplicaRequest(key=key)
+        response = self.stub.QueryReplica(request)
+        server = response.server
 
+        if server:
+            with grpc.insecure_channel(server) as channel:
+                storage_stub = KVStoreStub(channel)
+                l_pop_request = GetRequest(key=key)
+                l_pop_response = storage_stub.LPop(l_pop_request)
+                return _get_return(l_pop_response)
+        else:
+            return None
 
     def r_pop(self, key: int) -> Union[str, None]:
-        """
-        To fill with your code
-        """
+        request = QueryReplicaRequest(key=key)
+        response = self.stub.QueryReplica(request)
+        server = response.server
 
+        if server:
+            with grpc.insecure_channel(server) as channel:
+                storage_stub = KVStoreStub(channel)
+                r_pop_request = GetRequest(key=key)
+                r_pop_response = storage_stub.RPop(r_pop_request)
+                return _get_return(r_pop_response)
+        else:
+            return None
 
     def put(self, key: int, value: str):
-        """
-        To fill with your code
-        """
+        request = QueryReplicaRequest(key=key)
+        response = self.stub.QueryReplica(request)
+        server = response.server
 
+        if server:
+            with grpc.insecure_channel(server) as channel:
+                storage_stub = KVStoreStub(channel)
+                put_request = PutRequest(key=key, value=value)
+                storage_stub.Put(put_request)
 
     def append(self, key: int, value: str):
-        """
-        To fill with your code
-        """
+        request = QueryReplicaRequest(key=key)
+        response = self.stub.QueryReplica(request)
+        server = response.server
 
+        if server:
+            with grpc.insecure_channel(server) as channel:
+                storage_stub = KVStoreStub(channel)
+                append_request = AppendRequest(key=key, value=value)
+                storage_stub.Append(append_request)
