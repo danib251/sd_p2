@@ -194,6 +194,23 @@ class ShardMasterReplicasService(ShardMasterSimpleService):
                 print("Replica server created:", replica)
                 print("Current replicas:", self.replicas)
 
+    def query_replica(self, key: int, op: Operation) -> str:
+        with self.lock:
+            num_replicas = len(self.replicas)
+            if num_replicas == 0:
+                raise ValueError("There are no replicas in the system")
+
+            shard_size = KEYS_UPPER_THRESHOLD // num_replicas
+            shard_index = key // shard_size
+
+            if op == Operation.GET:
+                return self.replicas[shard_index % num_replicas]
+            elif op == Operation.L_POP or op == Operation.R_POP:
+                return self.replicas[(shard_index - 1) % num_replicas]
+            elif op == Operation.PUT or op == Operation.APPEND:
+                return self.replicas[shard_index % num_replicas]
+            else:
+                raise ValueError("Invalid operation")
 
 class ShardMasterServicer(ShardMasterServicer):
     def __init__(self, shard_master_service: ShardMasterService):
@@ -218,5 +235,8 @@ class ShardMasterServicer(ShardMasterServicer):
 
     def QueryReplica(self, request: QueryReplicaRequest, context) -> QueryResponse:
         key = request.key
-        server = self.shard_master_service.query_replica(key)
+        op = request.operation
+        server = self.shard_master_service.query_replica(key, op)
         return QueryResponse(server=server)
+
+
