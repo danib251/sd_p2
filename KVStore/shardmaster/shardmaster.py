@@ -41,13 +41,12 @@ class ShardMasterSimpleService(ShardMasterService):
                 num_servers = len(self.servers)
                 if num_servers != 1:
                     # Calculate lower and upper value for the new server's shard
-                    shard_size = KEYS_UPPER_THRESHOLD // num_servers
-                    last_shard_size = KEYS_UPPER_THRESHOLD // (num_servers - 1)
+                    shard_size = (KEYS_UPPER_THRESHOLD + 1) // num_servers
+                    last_shard_size = (KEYS_UPPER_THRESHOLD + 1) // (num_servers - 1)
                     # Redistribute the keys of all servers
                     for i, s in enumerate(self.servers[:-2]):
-                        lower_val = i * shard_size
                         upper_val = (i + 1) * shard_size - 1 if i != num_servers - 1 else KEYS_UPPER_THRESHOLD
-                        max_upper_val = (i + 1) * last_shard_size
+                        max_upper_val = (i + 1) * last_shard_size -1
                         request = RedistributeRequest(
                             destination_server=self.servers[i + 1],
                             lower_val=upper_val,
@@ -66,8 +65,6 @@ class ShardMasterSimpleService(ShardMasterService):
                     self.channel = grpc.insecure_channel(self.servers[-2])
                     self.stub = KVStoreStub(self.channel)
                     response = self.stub.Redistribute(request)
-            print("servers created: ", server)
-            print("self.servers created: ", self.servers)
 
     def leave(self, server: str):
         with self.lock:
@@ -75,42 +72,47 @@ class ShardMasterSimpleService(ShardMasterService):
                 raise ValueError("The server is not present in the system")
             posicion = self.servers.index(server)
             num_servers = len(self.servers)
-
-            last_shard_size = KEYS_UPPER_THRESHOLD // num_servers
-            # print("self.servers: ", len(self.servers))
+            shard_size = (KEYS_UPPER_THRESHOLD + 1) // num_servers
+            
             if num_servers != 1:
-                shard_size = KEYS_UPPER_THRESHOLD // (num_servers - 1)
-                # Redistribute the keys of all servers in reverse order
-                sublist = self.servers[:-2]
-                for i, s in enumerate(sublist):
-                    upper_val = (i + 1) * last_shard_size - 1
-                    max_upper_val = (i + 1) * last_shard_size + (i + 1) * shard_size - (i + 1) * last_shard_size - 1
-                    destination_server = self.servers[i + 1]
+                if(posicion != len(self.servers) - 1):#primer servidor
+                    
                     request = RedistributeRequest(
-                        destination_server=s,
-                        lower_val=upper_val,
-                        upper_val=max_upper_val
+                        destination_server=self.servers[posicion + 1],
+                        lower_val=shard_size*posicion,
+                        upper_val=shard_size*(posicion + 1) - 1
                     )
-                    self.channel = grpc.insecure_channel(self.servers[i])
+                    self.channel = grpc.insecure_channel(self.servers[posicion])
                     self.stub = KVStoreStub(self.channel)
                     response = self.stub.Redistribute(request)
-
-                # Perform redistribution for the last server
-                request = RedistributeRequest(
-                    destination_server=self.servers[-2],
-                    lower_val=KEYS_UPPER_THRESHOLD - last_shard_size,
-                    upper_val=KEYS_UPPER_THRESHOLD
-                )
-
-                self.channel = grpc.insecure_channel(server)
-                self.stub = KVStoreStub(self.channel)
-                response = self.stub.Redistribute(request)
-
+                if(posicion != 0):#ultimo servidor
+                    request = RedistributeRequest(
+                        destination_server=self.servers[posicion - 1],
+                        lower_val=shard_size*(posicion -1),
+                        upper_val=shard_size*posicion -1
+                    )
+                    self.channel = grpc.insecure_channel(self.servers[posicion])
+                    self.stub = KVStoreStub(self.channel)
+                    response = self.stub.Redistribute(request)
+                
                 self.servers.remove(server)
+                num_servers = len(self.servers)
+                if num_servers != 1:
+                    shard_size = (KEYS_UPPER_THRESHOLD + 1) // num_servers
+                    last_shard_size = (KEYS_UPPER_THRESHOLD + 1) // (num_servers - 1)
+                    for i, s in enumerate(self.servers[:-1]):
+                        upper_val = (i + 1) * last_shard_size - 1
+                        max_upper_val = (i + 1) * last_shard_size + (i + 1) * shard_size - (i + 1) * last_shard_size - 1
+                        request = RedistributeRequest(
+                            destination_server=self.servers[i + 1],
+                            lower_val=upper_val,
+                            upper_val=max_upper_val
+                        )
+                        self.channel = grpc.insecure_channel(s)
+                        self.stub = KVStoreStub(self.channel)
+                        response = self.stub.Redistribute(request)
             else:
                 self.servers.remove(server)
-            print("servers deleted: ", server)
-            print("self.servers deleted : ", self.servers)
 
     def query(self, key: int) -> str:
         num_servers = len(self.servers)

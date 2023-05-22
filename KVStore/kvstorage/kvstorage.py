@@ -59,8 +59,6 @@ class KVStorageSimpleService(KVStorageService):
     def get(self, key: int) -> Union[str, None]:
         with self.lock:
             if key in self.storage:
-                print("Key %d not found" % key)
-                print("Current storage: %s" % self.storage[key])
                 return self.storage[key]
             else:
                 return None
@@ -98,8 +96,6 @@ class KVStorageSimpleService(KVStorageService):
                 self.storage[key] = self.storage[key] + value  
             else:
                 self.storage[key] = value
-            print("Appended %s to key %d" % (value, key))
-            print("New value: %s" % self.storage[key])    
 
     def redistribute(self, destination_server: str, lower_val: int, upper_val: int):
         with self.lock:
